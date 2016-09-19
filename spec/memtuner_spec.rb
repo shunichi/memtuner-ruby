@@ -6,6 +6,6 @@ describe Memtuner do
   end
 
   it "does something useful" do
-    expect(false).to eq(true)
+    expect(Memtuner.malloc_info).not_to be_nil
   end
 end
