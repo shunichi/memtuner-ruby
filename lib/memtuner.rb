@@ -5,6 +5,7 @@ module Memtuner
   @@rss_usage_on_load = Memtuner.rss_usage
   @@glibc_mallinfo_on_load = Memtuner.glibc_mallinfo
   @@glibc_malloc_info_on_load = Memtuner.glibc_malloc_info
+  @@gc_stat_on_load = GC.stat
 
   def self.rss_usage_on_load
     @@rss_usage_on_load
@@ -16,6 +17,10 @@ module Memtuner
 
   def self.glibc_malloc_info_on_load
     @@glibc_malloc_info_on_load
+  end
+
+  def self.gc_stat_on_load
+    @@gc_stat_on_load
   end
 end
 
