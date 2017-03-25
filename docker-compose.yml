@@ -2,6 +2,6 @@ version: '2'
 services:
   dev:
     build: .
-    command: bundle exec rake compile spec
+    command: bundle exec rake clean compile spec
     volumes:
       - .:/mygem
