@@ -5,20 +5,20 @@ describe Memtuner do
     expect(Memtuner::VERSION).not_to be nil
   end
 
-  describe '#mallinfo' do
+  describe '#glibc_mallinfo' do
     it 'returns non nil value' do
-      expect(Memtuner.mallinfo).not_to be_nil
+      expect(Memtuner.glibc_mallinfo).not_to be_nil
     end
     it 'has mallinfo member keys' do
       %i(arena ordblks smblks hblks hblkhd usmblks fsmblks uordblks fordblks keepcost).each do |sym|
-        expect(Memtuner.mallinfo).to include sym
+        expect(Memtuner.glibc_mallinfo).to include sym
       end
     end
   end
 
-  describe '#malloc_info' do
+  describe '#glibc_malloc_info' do
     it 'returns non nil value' do
-      expect(Memtuner.malloc_info).not_to be_nil
+      expect(Memtuner.glibc_malloc_info).not_to be_nil
     end
   end
 

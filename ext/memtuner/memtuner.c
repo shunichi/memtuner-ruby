@@ -92,8 +92,8 @@ Init_memtuner(void)
 #undef DEF_SYM
 
     rb_mMemtuner = rb_define_module("Memtuner");
-    rb_define_module_function(rb_mMemtuner, "mallinfo", rb_memtuner_mallinfo, 0);
-    rb_define_module_function(rb_mMemtuner, "malloc_info", rb_memtuner_malloc_info, 0);
+    rb_define_module_function(rb_mMemtuner, "glibc_mallinfo", rb_memtuner_mallinfo, 0);
+    rb_define_module_function(rb_mMemtuner, "glibc_malloc_info", rb_memtuner_malloc_info, 0);
     rb_define_module_function(rb_mMemtuner, "rss_usage", rb_memtuner_rss_usage, 0);
 }
 
