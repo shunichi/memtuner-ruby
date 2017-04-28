@@ -7,6 +7,8 @@
 #include "ZydisInstructionDecoder.hpp"
 #include "debug.h"
 
+#define DEBUG_FUNCTION_HOOK 0
+
 const size_t MAX_CODE_BYTES = 32;
 const size_t JMP_CODE_BYTES = 5;
 const size_t RIP_PATCH_MAX = 4;
@@ -137,18 +139,22 @@ size_t disassemble_and_skip(void *func, patch_data_t& patch_data)
             break;
         }
 
+#if DEBUG_FUNCTION_HOOK
         uint8_t *bytes = (uint8_t *)func + size;
         printf("%p: ", bytes);
         for(size_t i = 0; i < info.length; ++i) {
             printf("%02x ", bytes[i]);
         }
         printf("\n");
+#endif
         size += info.length;
     }
+#if DEBUG_FUNCTION_HOOK    
     for(size_t i = 0; i < patch_data.rip_count; ++i) {
         printf("RIP[%zu] offset=%zu displacement=%04x\n", i, patch_data.rip_patch[i].offset, patch_data.rip_patch[i].displacement);
     }
     printf("top=%zd botttom=%zd\n", patch_data.top, patch_data.bottom);
+#endif
     return size;
 }
 
@@ -195,18 +201,17 @@ trampoline_t* alloc_trampoline(void* func, int64_t bottom, int64_t top) {
     lower_limit = lower_limit < reinterpret_cast<uint8_t*>(TWO_GIGA) ?  reinterpret_cast<uint8_t*>(1) : lower_limit - 0x7fff0000;
     upper_limit = reinterpret_cast<uint8_t*>(MINUS_TWO_GIGA) < upper_limit ? reinterpret_cast<uint8_t*>(0xfffffffffff80000) : upper_limit + 0x7ff80000;
 
-    printf("mmap(%p, %zu, ...)\n", round_down_ptr(func, page_size), round_up(sizeof(trampoline_t), page_size));
     trampoline_map_size = round_up(sizeof(trampoline_t), page_size);
     void *p = mmap(round_down_ptr(func, page_size), trampoline_map_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (p == MAP_FAILED) {
-        printf("map failed: %d\n", errno);
+        memtuner_debug_println_signed("memtuner: map failed: ", errno);
         return nullptr;
     }
     if (lower_limit < static_cast<uint8_t *>(p) && static_cast<uint8_t *>(p) < upper_limit) {
-        printf("map succeeded: %p (func=%p)\n", p, func);
+        // printf("map succeeded: %p (func=%p)\n", p, func);
         return static_cast<trampoline_t *>(p);
     } else {
-        printf("map out of range: %p (func=%p)\n", p, func);
+        // printf("map out of range: %p (func=%p)\n", p, func);
         free_trampoline(p);
         return nullptr;
     }
@@ -277,7 +282,7 @@ void* hook_function(void* func, void* hook_func) {
         trampoline_t* trampoline = alloc_trampoline(func, patch_data.bottom, patch_data.top);
         if (trampoline) {
             if (mprotect_code(func, size, PROT_EXEC | PROT_READ | PROT_WRITE) != 0) {
-                debug_print("mprotect failed\n");
+                memtuner_debug_print("memtuner: mprotect failed\n");
                 free_trampoline(trampoline);
                 return nullptr;
             }

@@ -35,7 +35,7 @@ static void *malloc_hook(size_t size) {
     info.malloc.allocated = p;
     add_call_info(&info);
 
-    debug_print("call malloc\n");
+    // memtuner_debug_print("call malloc\n");
     // rb_postponed_job_register_one();
     return p;
 }
@@ -46,7 +46,7 @@ static void free_hook(void *p) {
     info.free.ptr = p;
     add_call_info(&info);
 
-    debug_print("call free\n");
+    // memtuner_debug_print("call free\n");
     original_free(p);
 }
 
@@ -59,7 +59,7 @@ static void *realloc_hook(void *p, size_t size) {
     info.realloc.allocated = new_p;
     add_call_info(&info);
 
-    debug_print("call realloc\n");
+    // memtuner_debug_print("call realloc\n");
     return new_p;
 }
 static void *calloc_hook(size_t n, size_t size) {
@@ -71,7 +71,7 @@ static void *calloc_hook(size_t n, size_t size) {
     info.calloc.allocated = p;
     add_call_info(&info);
 
-    debug_print("call calloc\n");
+    // memtuner_debug_print("call calloc\n");
     return p;
 }
 #if HAVE_MEMALIGN
@@ -84,7 +84,7 @@ static void *memalign_hook(size_t align, size_t size) {
     info.memalign.allocated = p;
     add_call_info(&info);
 
-    debug_print("call memalign\n");
+    // memtuner_debug_print("call memalign\n");
     return p;
 }
 #endif
@@ -100,7 +100,7 @@ static int posix_memalign_hook(void **pp, size_t align, size_t size)
     info.posix_memalign.return_value = ret;
     add_call_info(&info);
 
-    debug_print("call posix_memalign\n");
+    // memtuner_debug_print("call posix_memalign\n");
     return ret;
 }
 #endif
@@ -124,26 +124,26 @@ static void resolve_function_pointers(void) {
 static void hook_functions(void) {
     resolve_function_pointers();
 
-    debug_print("----- realloc\n");
+    // memtuner_debug_print("----- realloc\n");
     original_realloc = hook_function(realloc, realloc_hook);
-    debug_print("----- malloc\n");
+    // memtuner_debug_print("----- malloc\n");
     original_malloc = hook_function(malloc, malloc_hook);
-    debug_print("----- free\n");
+    // memtuner_debug_print("----- free\n");
     original_free = hook_function(free, free_hook);
-    debug_print("----- calloc\n");
+    // memtuner_debug_print("----- calloc\n");
     original_calloc = hook_function(calloc, calloc_hook);
 #if HAVE_MEMALIGN
-   debug_print("----- memalign\n");
+   // memtuner_debug_print("----- memalign\n");
    original_memalign = hook_function(memalign, memalign_hook);
 #endif
 #if HAVE_POSIX_MEMALIGN
-    debug_print("----- posix_memalign\n");
+    // memtuner_debug_print("----- posix_memalign\n");
     original_posix_memalign = hook_function(posix_memalign, posix_memalign_hook);
 #endif
 }
 
 void init_malloc_tracer(void){
-    debug_print("init_malloc_tracer\n");
+    // memtuner_debug_print("init_malloc_tracer\n");
 
     hook_functions();
 }

@@ -63,6 +63,8 @@ typedef struct {
     pthread_t thread_id;
     call_info_t* call_infos;
     size_t size;
+    size_t in_handler_calls;
+    int job_handler_queued;
 } call_info_buffer_t;
 
 extern void clear_call_info_buffer(void);

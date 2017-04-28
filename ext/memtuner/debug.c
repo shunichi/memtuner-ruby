@@ -2,8 +2,15 @@
 #include <string.h>
 #include "debug.h"
 
-void debug_print(char const *s) {
-    write(1, s, strlen(s));
+void memtuner_debug_print(char const *str) {
+	if (str != NULL && str[0] != '\n')
+	    write(1, str, strlen(str));
+}
+
+void memtuner_debug_println(char const *str) {
+	if (str != NULL && str[0] != '\n')
+	    write(1, str, strlen(str));
+	write(1, "\n", 1);
 }
 
 static size_t uint64_t_to_hex(uint64_t n, char* buf) {
@@ -59,23 +66,47 @@ static size_t int64_t_to_s(int64_t n, char* buf) {
 	return index;
 }
 
-void debug_print_hex(uint64_t n) {
+void memtuner_debug_print_hex(char const* str, uint64_t n) {
 	char buf[32];
 	size_t const len = uint64_t_to_hex(n, buf);
-	buf[len] = '\n';
-	write(1, buf, len + 1);
+	memtuner_debug_print(str);
+	write(1, buf, len);
 }
 
-void debug_print_unsigned(uint64_t n) {
+void memtuner_debug_print_unsigned(char const* str, uint64_t n) {
 	char buf[32];
 	size_t const len = uint64_t_to_s(n, buf);
-	buf[len] = '\n';
-	write(1, buf, len + 1);
+	memtuner_debug_print(str);
+	write(1, buf, len);
 }
 
-void debug_print_signed(int64_t n) {
+void memtuner_debug_print_signed(char const* str, int64_t n) {
 	char buf[32];
 	size_t const len = int64_t_to_s(n, buf);
-	buf[len] = '\n';
-	write(1, buf, len + 1);
+	memtuner_debug_print(str);
+	write(1, buf, len);
+}
+
+void memtuner_debug_println_hex(char const* str, uint64_t n) {
+	char buf[32];
+	size_t len = uint64_t_to_hex(n, buf);
+	buf[len++] = '\n';
+	memtuner_debug_print(str);
+	write(1, buf, len);
+}
+
+void memtuner_debug_println_unsigned(char const* str, uint64_t n) {
+	char buf[32];
+	size_t len = uint64_t_to_s(n, buf);
+	buf[len++] = '\n';
+	memtuner_debug_print(str);
+	write(1, buf, len);
+}
+
+void memtuner_debug_println_signed(char const* str, int64_t n) {
+	char buf[32];
+	size_t len = int64_t_to_s(n, buf);
+	buf[len++] = '\n';
+	memtuner_debug_print(str);
+	write(1, buf, len);
 }

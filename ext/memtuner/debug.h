@@ -7,10 +7,14 @@
 extern "C" {
 #endif
 
-extern void debug_print(char const *s);
-extern void debug_print_hex(uint64_t n);
-extern void debug_print_unsigned(uint64_t n);
-extern void debug_print_signed(int64_t n);
+extern void memtuner_debug_print(char const *str);
+extern void memtuner_debug_print_hex(char const* str, uint64_t n);
+extern void memtuner_debug_print_unsigned(char const* str, uint64_t n);
+extern void memtuner_debug_print_signed(char const* str, int64_t n);
+extern void memtuner_debug_println(char const *str);
+extern void memtuner_debug_println_hex(char const* str, uint64_t n);
+extern void memtuner_debug_println_unsigned(char const* str, uint64_t n);
+extern void memtuner_debug_println_signed(char const* str, int64_t n);
 
 #ifdef __cplusplus
 }
