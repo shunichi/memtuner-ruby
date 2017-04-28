@@ -179,10 +179,12 @@ T offset_ptr(T ptr, ptrdiff_t diff) {
 
 uint64_t const TWO_GIGA = 0x80000000;
 uint64_t const MINUS_TWO_GIGA = 0xffffffff80000000;
+namespace {
+    size_t trampoline_map_size = 0;
+}
 
 void free_trampoline(void* trampoline) {
-    size_t const page_size = static_cast<size_t>(getpagesize());
-    munmap(trampoline, round_up(sizeof(trampoline_t), page_size));
+    munmap(trampoline, trampoline_map_size);
 }
 
 trampoline_t* alloc_trampoline(void* func, int64_t bottom, int64_t top) {
@@ -194,7 +196,8 @@ trampoline_t* alloc_trampoline(void* func, int64_t bottom, int64_t top) {
     upper_limit = reinterpret_cast<uint8_t*>(MINUS_TWO_GIGA) < upper_limit ? reinterpret_cast<uint8_t*>(0xfffffffffff80000) : upper_limit + 0x7ff80000;
 
     printf("mmap(%p, %zu, ...)\n", round_down_ptr(func, page_size), round_up(sizeof(trampoline_t), page_size));
-    void *p = mmap(round_down_ptr(func, page_size), round_up(sizeof(trampoline_t), page_size), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    trampoline_map_size = round_up(sizeof(trampoline_t), page_size);
+    void *p = mmap(round_down_ptr(func, page_size), trampoline_map_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (p == MAP_FAILED) {
         printf("map failed: %d\n", errno);
         return nullptr;
@@ -207,6 +210,10 @@ trampoline_t* alloc_trampoline(void* func, int64_t bottom, int64_t top) {
         free_trampoline(p);
         return nullptr;
     }
+}
+
+void protect_trampoline(trampoline_t* trampoline) {
+    mprotect(trampoline, trampoline_map_size, PROT_EXEC | PROT_READ);
 }
 
 void fixup_ip_relative(uint8_t *code, uint8_t *original_code, patch_data_t const& patch_data) {
@@ -270,7 +277,7 @@ void* hook_function(void* func, void* hook_func) {
         trampoline_t* trampoline = alloc_trampoline(func, patch_data.bottom, patch_data.top);
         if (trampoline) {
             if (mprotect_code(func, size, PROT_EXEC | PROT_READ | PROT_WRITE) != 0) {
-                write_stdout("mprotect failed\n");
+                debug_print("mprotect failed\n");
                 free_trampoline(trampoline);
                 return nullptr;
             }
@@ -298,7 +305,7 @@ void* hook_function(void* func, void* hook_func) {
             trampoline->code_length = size;
 
             mprotect_code(func, size, PROT_EXEC | PROT_READ);
-
+            protect_trampoline(trampoline);
             return trampoline->entry_code;
         }
     }
