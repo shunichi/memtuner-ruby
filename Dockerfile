@@ -5,4 +5,4 @@ WORKDIR /mygem
 ADD . /mygem
 RUN bundle install
 
-RUN apt-get install -y less
+RUN apt-get install -y less gdb

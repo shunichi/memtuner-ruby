@@ -1,5 +1,6 @@
 #include "memtuner.h"
 #include "getrss.h"
+#include "malloc_tracer.h"
 #include <stdlib.h>
 #include <stdio.h>
 #if HAVE_MALLOC_INFO
@@ -76,6 +77,8 @@ rb_memtuner_rss_usage(VALUE self)
 void
 Init_memtuner(void)
 {
+    init_malloc_tracer();
+
 #define DEF_SYM(name) sym_ ## name = ID2SYM(rb_intern(#name))
     DEF_SYM(current);
     DEF_SYM(peak);
