@@ -77,8 +77,6 @@ rb_memtuner_rss_usage(VALUE self)
 void
 Init_memtuner(void)
 {
-    init_malloc_tracer();
-
 #define DEF_SYM(name) sym_ ## name = ID2SYM(rb_intern(#name))
     DEF_SYM(current);
     DEF_SYM(peak);
@@ -98,6 +96,8 @@ Init_memtuner(void)
     rb_define_module_function(rb_mMemtuner, "glibc_mallinfo", rb_memtuner_mallinfo, 0);
     rb_define_module_function(rb_mMemtuner, "glibc_malloc_info", rb_memtuner_malloc_info, 0);
     rb_define_module_function(rb_mMemtuner, "rss_usage", rb_memtuner_rss_usage, 0);
+
+    init_malloc_tracer();
 }
 
 

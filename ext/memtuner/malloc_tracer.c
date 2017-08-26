@@ -124,26 +124,35 @@ static void resolve_function_pointers(void) {
 static void hook_functions(void) {
     resolve_function_pointers();
 
-    // memtuner_debug_print("----- realloc\n");
-    original_realloc = hook_function(realloc, realloc_hook);
+#define DUMP_HOOK_RESULT(name) if (original_ ## name) { memtuner_debug_print("memtuner: " #name ": hook succeeded.\n"); } else { memtuner_debug_print("memtuner: "#name ": hook faild.\n"); }
+//#define DUMP_HOOK_RESULT(name)
+
     // memtuner_debug_print("----- malloc\n");
     original_malloc = hook_function(malloc, malloc_hook);
+    DUMP_HOOK_RESULT(malloc);
     // memtuner_debug_print("----- free\n");
     original_free = hook_function(free, free_hook);
+    DUMP_HOOK_RESULT(free);
     // memtuner_debug_print("----- calloc\n");
     original_calloc = hook_function(calloc, calloc_hook);
+    DUMP_HOOK_RESULT(calloc);
+    // memtuner_debug_print("----- realloc\n");
+    original_realloc = hook_function(realloc, realloc_hook);
+    DUMP_HOOK_RESULT(realloc);
 #if HAVE_MEMALIGN
    // memtuner_debug_print("----- memalign\n");
    original_memalign = hook_function(memalign, memalign_hook);
+   DUMP_HOOK_RESULT(memalign);
 #endif
 #if HAVE_POSIX_MEMALIGN
     // memtuner_debug_print("----- posix_memalign\n");
     original_posix_memalign = hook_function(posix_memalign, posix_memalign_hook);
+    DUMP_HOOK_RESULT(posix_memalign);
 #endif
 }
 
 void init_malloc_tracer(void){
-    // memtuner_debug_print("init_malloc_tracer\n");
-
+    memtuner_debug_print("init_malloc_tracer\n");
+    vm_dump();
     hook_functions();
 }

@@ -19,7 +19,7 @@ static size_t uint64_t_to_hex(uint64_t n, char* buf) {
 	int first = 1;
 
 	while (shift >= 0) {
-		uint64_t d = (0xf << shift) & n;
+		uint64_t d = (0xf) & (n >> shift);
 		if (!first || d != 0){
 			first = 0;
 			buf[index++] = d < 10 ? '0' + d : 'A' + (d - 10);
