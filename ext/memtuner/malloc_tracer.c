@@ -153,6 +153,5 @@ static void hook_functions(void) {
 
 void init_malloc_tracer(void){
     memtuner_debug_print("init_malloc_tracer\n");
-    vm_dump();
     hook_functions();
 }

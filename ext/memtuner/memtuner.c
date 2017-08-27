@@ -1,5 +1,6 @@
 #include "memtuner.h"
 #include "getrss.h"
+#include "thread_tracer.h"
 #include "malloc_tracer.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -97,6 +98,7 @@ Init_memtuner(void)
     rb_define_module_function(rb_mMemtuner, "glibc_malloc_info", rb_memtuner_malloc_info, 0);
     rb_define_module_function(rb_mMemtuner, "rss_usage", rb_memtuner_rss_usage, 0);
 
+    init_thread_tracer();
     init_malloc_tracer();
 }
 

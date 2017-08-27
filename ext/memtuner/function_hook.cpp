@@ -124,6 +124,8 @@ struct patch_data_t{
     ptrdiff_t bottom;
     uint32_t rip_count;
     rip_patch_t rip_patch[RIP_PATCH_MAX];
+    size_t jmp_code_offset;
+    uintptr_t jmp_address;
 };
 
 struct trampoline_t {
@@ -134,6 +136,39 @@ struct trampoline_t {
     uint8_t jump_to_hook_code[MAX_CODE_BYTES];
     uint8_t entry_code[MAX_CODE_BYTES];
 };
+
+static void* jump_address(uint8_t* code) {
+    if (code[0] == 0xff && code[1] == 0x25) {
+        int32_t offset;
+        memcpy(&offset, code + 2, sizeof(offset));
+        void* ptr;
+        memcpy(&ptr, code + 6 + offset, sizeof(ptr));
+        return ptr;
+    } else if (code[0] == 0x48 && code[1] == 0xff && code[2] == 0x25) {
+        int32_t offset;
+        memcpy(&offset, code + 3, sizeof(offset));
+        void* ptr;
+        memcpy(&ptr, code + 7 + offset, sizeof(ptr));
+        return ptr;
+    } else if (code[0] == 0xe9) {
+        int32_t offset;
+        memcpy(&offset, code + 1, sizeof(offset));
+        return code + 5 + offset;
+    } else if (code[0] == 0xeb) {
+        int8_t offset;
+        memcpy(&offset, code + 1, sizeof(offset));
+        return code + 2 + offset;
+    }
+    return nullptr;
+}
+
+static void* skip_jumps(void* func) {
+    uint8_t* const code = static_cast<uint8_t*>(func);
+    void* ptr = jump_address(code);
+    if (ptr)
+        return skip_jumps(ptr);
+    return func;
+}
 
 size_t disassemble_and_skip(void *func, patch_data_t& patch_data)
 {
@@ -148,6 +183,8 @@ size_t disassemble_and_skip(void *func, patch_data_t& patch_data)
     patch_data.top = 0;
     patch_data.bottom = 0;
     patch_data.rip_count = 0;
+    patch_data.jmp_code_offset = 0;
+    patch_data.jmp_address = 0;
 
     size_t size = 0;
     while (size < JMP_CODE_BYTES && decoder.decodeInstruction(info)) {
@@ -155,6 +192,21 @@ size_t disassemble_and_skip(void *func, patch_data_t& patch_data)
             return 0;
         }
         switch(info.mnemonic) {
+        case Zydis::InstructionMnemonic::JMP:
+            {
+                void* address = jump_address(reinterpret_cast<uint8_t*>(func) + size);
+                if (info.length >= JMP_CODE_BYTES && address) {
+                    patch_data.jmp_code_offset = size;
+                    patch_data.jmp_address = reinterpret_cast<uintptr_t>(address);
+                    ptrdiff_t const adjusted_displacement = patch_data.jmp_address - reinterpret_cast<uintptr_t>(func);
+                    if (adjusted_displacement < patch_data.bottom)
+                        patch_data.bottom = adjusted_displacement;
+                    if (patch_data.top < adjusted_displacement)
+                        patch_data.top = adjusted_displacement;
+                    return size + info.length;
+                }
+                return size;
+            }
         case Zydis::InstructionMnemonic::RET:
         case Zydis::InstructionMnemonic::RETF:
         case Zydis::InstructionMnemonic::JA:
@@ -167,7 +219,6 @@ size_t disassemble_and_skip(void *func, patch_data_t& patch_data)
         case Zydis::InstructionMnemonic::JGE:
         case Zydis::InstructionMnemonic::JL:
         case Zydis::InstructionMnemonic::JLE:
-        case Zydis::InstructionMnemonic::JMP:
         case Zydis::InstructionMnemonic::JNB:
         case Zydis::InstructionMnemonic::JNE:
         case Zydis::InstructionMnemonic::JNO:
@@ -281,9 +332,9 @@ trampoline_t* alloc_trampoline(void* func, int64_t bottom, int64_t top) {
 
     trampoline_map_size = round_up(sizeof(trampoline_t), page_size);
 #if defined __APPLE__ && defined __MACH__ /* Mac OS X */
-    void *p = vm_mmap(lower_limit, upper_limit, trampoline_map_size);
+    void* p = vm_mmap(lower_limit, upper_limit, trampoline_map_size);
 #else
-    void *p = mmap(round_down_ptr(func, page_size), trampoline_map_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    void* p = mmap(round_down_ptr(func, page_size), trampoline_map_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 #endif
     if (p == MAP_FAILED) {
         memtuner_debug_println_signed("memtuner: map failed: ", errno);
@@ -306,15 +357,6 @@ void protect_trampoline(trampoline_t* trampoline) {
     mprotect(trampoline, trampoline_map_size, PROT_EXEC | PROT_READ);
 }
 
-void fixup_ip_relative(uint8_t *code, uint8_t *original_code, patch_data_t const& patch_data) {
-    ptrdiff_t const diff = code - original_code;
-    for (uint32_t i = 0; i < patch_data.rip_count; ++i) {
-        rip_patch_t const& rip_patch = patch_data.rip_patch[i];
-        int32_t const new_displacement = static_cast<int32_t>(rip_patch.displacement - diff);
-        memcpy(code + rip_patch.offset, &new_displacement, sizeof(new_displacement));
-    }
-}
-
 uint8_t* emit_jump(uint8_t* code, uint8_t* jump_to) {
     uint8_t* const jump_from = code + 5;
     size_t diff = jump_from > jump_to ? jump_from - jump_to : jump_to - jump_from;
@@ -326,6 +368,7 @@ uint8_t* emit_jump(uint8_t* code, uint8_t* jump_to) {
         memcpy(code, &displacement, sizeof(displacement));
         code += sizeof(displacement);
     } else {
+        // todo: bug?
         // 14bytes
         code[0] = 0xff;
         code[1] = 0x25;
@@ -336,6 +379,18 @@ uint8_t* emit_jump(uint8_t* code, uint8_t* jump_to) {
         code += sizeof(jump_to);
     }
     return code;
+}
+
+void fixup_ip_relative(uint8_t *code, uint8_t *original_code, patch_data_t const& patch_data) {
+    ptrdiff_t const diff = code - original_code;
+    for (uint32_t i = 0; i < patch_data.rip_count; ++i) {
+        rip_patch_t const& rip_patch = patch_data.rip_patch[i];
+        int32_t const new_displacement = static_cast<int32_t>(rip_patch.displacement - diff);
+        memcpy(code + rip_patch.offset, &new_displacement, sizeof(new_displacement));
+    }
+    if (patch_data.jmp_address != 0) {
+        emit_jump(code + patch_data.jmp_code_offset, reinterpret_cast<uint8_t*>(patch_data.jmp_address));
+    }
 }
 
 void flush_icache(void* lower, void* upper) {
@@ -350,11 +405,6 @@ int mprotect_code(void* func, size_t size, int prot) {
     uint8_t* const aligned_code_begin = round_down_ptr(static_cast<uint8_t*>(func), page_size);
     size_t const aligned_code_length = round_up_ptr(static_cast<uint8_t*>(func) + size, page_size) - aligned_code_begin;
     return mprotect(aligned_code_begin, aligned_code_length, prot);
-}
-
-void* skip_jumps(void* func) {
-  // todo: implement
-  return func;
 }
 
 void* hook_function(void* func, void* hook_func) {

@@ -1,5 +1,7 @@
 require "mkmf"
 
+# CONFIG['optflags'] = '-O0'
+
 if have_header('malloc.h')
   have_func('malloc_info')
   have_func('memalign')
