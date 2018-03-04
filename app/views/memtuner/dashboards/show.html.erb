@@ -1,0 +1,19 @@
+<div class="page-header">
+  <h1>Memtuner</h1>
+</div>
+
+<h2>メモリ使用量</h2> 
+<%
+rss_usage = @memory_statistics.rss_usage
+glibc_mallinfo = @memory_statistics.glibc_mallinfo
+gc_stat = @memory_statistics.gc_stat
+%>
+<%= render 'memory_statistics', rss_usage: rss_usage, glibc_mallinfo: glibc_mallinfo, gc_stat: gc_stat %>
+
+<h2>起動時メモリ使用量</h2>
+<%= render 'memory_statistics', rss_usage: Memtuner.rss_usage_on_load, glibc_mallinfo: Memtuner.glibc_mallinfo_on_load, gc_stat: Memtuner.gc_stat_on_load %>
+
+<h2>malloc_info XML</h2> 
+<pre>
+<code><% if xml = @memory_statistics.glibc_malloc_info.presence %><%= xml %><% else %>No malloc_info!<% end %></code>
+</pre>

@@ -1,5 +1,6 @@
 require "memtuner/version"
 require "memtuner/memtuner"
+require "memtuner/memory_statistics"
 
 module Memtuner
   @@rss_usage_on_load = Memtuner.rss_usage
@@ -22,6 +23,10 @@ module Memtuner
   def self.gc_stat_on_load
     @@gc_stat_on_load
   end
+end
+
+if defined?(Rails)
+  require 'memtuner/engine'
 end
 
 # # rss usage

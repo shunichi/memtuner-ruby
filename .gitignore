@@ -7,8 +7,11 @@
 /pkg/
 /spec/reports/
 /tmp/
+/test/dummy/tmp/
+/test/dummy/log/*.log
 *.bundle
 *.so
 *.o
 *.a
 mkmf.log
+.vscode

@@ -1,0 +1,59 @@
+<table class="table table-bordered table-sm table-striped">
+  <tbody>
+    <tr><th colspan=4>RSS</th></tr>
+    <tr>
+      <th></th>
+      <th>RSS current</th>
+      <td class="text-right"><%= rss_usage[:current] %></td>
+      <td class="text-right"><%= number_to_human_size(rss_usage[:current]) %></td>
+    </tr>
+    <tr>
+      <th></th>
+      <th>RSS peak</th>
+      <td class="text-right"><%= rss_usage[:peak] %></td>
+      <td class="text-right"><%= number_to_human_size(rss_usage[:peak]) %></td>
+    </tr>
+    <% if glibc_mallinfo.present? %>
+      <tr><th colspan=4>glibc_mallinfo</th></tr>
+      <%
+      fields = {
+        arena: {desc: 'システムメモリ確保サイズ(bytes)'.freeze, bytes: true}.freeze,
+        uordblks: {desc: '使用中メモリサイズ(bytes)'.freeze, bytes: true}.freeze,
+        fordblks: {desc: '未使用メモリサイズ(bytes)'.freeze, bytes: true}.freeze,
+        hblkhd: {desc: 'mmapした領域の合計サイズ(bytes)'.freeze, bytes: true}.freeze,
+        fsmblks: {desc: 'fast bin 未使用メモリサイズ(bytes)'.freeze, bytes: true}.freeze,
+        hblks: {desc: 'mmapした領域の数'.freeze, bytes: false}.freeze,
+        ordblks: {desc: 'regular bin 未使用ブロック数'.freeze, bytes: false}.freeze,
+        smblks: {desc: 'fast bin 未使用ブロック数'.freeze, bytes: false}.freeze,
+        keepcost: {desc: 'メインアリーナ最上位未使用メモリブロックサイズ(bytes)'.freeze, bytes: true}.freeze,
+      }.freeze
+      %>    
+      <% fields.each do |k, v| %>
+        <% size = glibc_mallinfo[k] %>
+        <tr>
+          <th></th>
+          <th><%= v[:desc] %></th>
+          <td class="text-right"><%= size %></td>
+          <td class="text-right"><%= number_to_human_size(size) if v[:bytes] %></td>          
+        </tr>
+      <% end %>
+    <% end %>
+    <tr><th colspan=4>Ruby</th></tr>
+    <%
+    slots = {
+      heap_available_slots: '使用可能スロット'.freeze,
+      heap_live_slots: '使用中スロット'.freeze,
+      heap_free_slots: '未使用スロット'.freeze,
+      heap_final_slots: 'finalスロット'.freeze,
+    }.freeze
+    %>
+    <% slots.each do |k, name| %>
+      <tr>
+        <th></th>
+        <th><%= name %></th>
+        <td class="text-right"><%= gc_stat[k] %></td>
+        <td class="text-right"><%= number_to_human_size(gc_stat[k] * Memtuner::MemoryStatistics.ruby_rvalue_size) %></td>          
+      </tr>
+    <% end %>
+  </tbody>
+</table>
